@@ -55,6 +55,8 @@ cd boss-greeting-rank
 
 详见 [docs/install-openclaw.md](docs/install-openclaw.md)。
 
+长任务若不想每一步点批准，见 [docs/approvals-and-long-runs.md](docs/approvals-and-long-runs.md)（Cursor **Dangerously always allow** / OpenClaw YOLO）。
+
 ### Cursor
 
 ```bash
