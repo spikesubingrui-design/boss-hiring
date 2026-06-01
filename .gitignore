@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+*.pyc
+__pycache__/
+.env
+.env.*
+candidates.json
+scored.json
+*.log
+.idea/
+.vscode/

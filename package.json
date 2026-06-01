@@ -1,0 +1,39 @@
+{
+  "name": "@openpike/boss-greeting-rank",
+  "version": "1.0.0",
+  "description": "Agent skill: interview hiring requirements, rank Boss Zhipin chat greetings with resume + greeting text, merge across runs (read-only by default).",
+  "license": "MIT",
+  "type": "module",
+  "author": "OpenPike",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/spikesubingrui-design/boss-greeting-rank.git"
+  },
+  "keywords": [
+    "boss-zhipin",
+    "recruiting",
+    "openclaw",
+    "cursor",
+    "agent-skill",
+    "hiring"
+  ],
+  "files": [
+    "SKILL.md",
+    "reference.md",
+    "scripts",
+    "docs",
+    "runtime",
+    "install.sh",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "install:openclaw": "bash install.sh openclaw",
+    "install:cursor": "bash install.sh cursor",
+    "test": "python3 -m py_compile scripts/extract_candidates.py scripts/merge_ranking.py && node runtime/test-conversation-greeting.js",
+    "test:integration": "node /opt/homebrew/lib/node_modules/@reconcrap/boss-recommend-mcp/src/test-chat-conversation-greeting.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
