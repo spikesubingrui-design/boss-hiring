@@ -1,13 +1,27 @@
-# Boss Greeting Rank · 招呼智排
+<div align="center">
+
+# boss-hiring · 招呼智排
+
+**用你自己的招聘标准，给 Boss 直聘聊天页的候选人「打招呼」自动排序。**
+
+Agent 先访谈你的着重点 → 生成加权评分表 → 只读扫描招呼与简历 → 合并历史排名，新招呼增量上榜。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-ready-green)](docs/install-openclaw.md)
 [![Cursor](https://img.shields.io/badge/Cursor-ready-purple)](docs/install-cursor.md)
+[![GitHub stars](https://img.shields.io/github/stars/spikesubingrui-design/boss-hiring?style=social)](https://github.com/spikesubingrui-design/boss-hiring/stargazers)
 
-**用你自己的招聘标准，给 Boss 直聘聊天页的候选人打招呼自动排序。**  
-Agent 先访谈你的着重点 → 生成加权评分表 → 只读扫描招呼与简历 → 合并历史排名，新招呼增量上榜。
+[快速安装](#快速安装) · [典型流程](#典型流程) · [常见问题](#常见问题-faq) · [English](#english)
+
+</div>
 
 > 默认 **只读**：不发消息、不点「求简历」，适合 HR / 猎头在合规前提下做初筛。
+
+---
+
+## English
+
+**boss-hiring** is an Agent skill that ranks Boss Zhipin (Boss 直聘) chat-page candidates against *your own* hiring rubric. The Agent interviews you for what matters, builds a weighted scorecard, scans greetings + résumés **read-only**, and merges new greetings into a persistent leaderboard. Built for the OpenClaw / Cursor agent runtime. The tool targets the China-only Boss Zhipin platform, so docs are Chinese-first by design.
 
 ---
 
@@ -20,6 +34,7 @@ Agent 先访谈你的着重点 → 生成加权评分表 → 只读扫描招呼�
 | 只看简历不看招呼 | 单独 **打招呼维度**，持久化候选人首条消息原文 |
 | 怕 Agent 乱发消息 | 内置只读护栏，禁止 `greeting_text` / 求简历类参数 |
 | 扫一半卡住、跳人丢了 | stuck 恢复 playbook + skip 进榜带原因，不静默丢失 |
+| 被反爬识别 / 跑批太慢 | CloakBrowser 指纹隐身 + 可调拟人节奏（见 [运维 runbook](docs/runbook-boss-greeting-ops.md)） |
 
 ---
 
@@ -27,7 +42,7 @@ Agent 先访谈你的着重点 → 生成加权评分表 → 只读扫描招呼�
 
 ```mermaid
 flowchart LR
-  User[招聘负责人] --> Skill[boss-greeting-rank Skill]
+  User[招聘负责人] --> Skill[boss-hiring Skill]
   Skill -->|访谈 / 打分 / 合并| Data[(rubric + ranking.json)]
   Skill -->|start_boss_chat_run 等| Runtime[boss-recommend-mcp]
   Runtime -->|CDP| Boss[Boss 直聘聊天页]
@@ -35,8 +50,8 @@ flowchart LR
 ```
 
 - **本仓库（Skill）**：流程、护栏、Python 解析/合并脚本 — **MIT 开源**
-- **运行时（Runtime）**：[`@reconcrap/boss-recommend-mcp`](https://www.npmjs.com/package/@reconcrap/boss-recommend-mcp) ≥ **2.0.57**（含招呼原文持久化）  
-  - OpenClaw 通常已内置为 `boss-recommend__*` 工具，无需像 Cursor 那样单独配 MCP 面板  
+- **运行时（Runtime）**：[`@reconcrap/boss-recommend-mcp`](https://www.npmjs.com/package/@reconcrap/boss-recommend-mcp) ≥ **2.0.57**（含招呼原文持久化）
+  - OpenClaw 通常已内置为 `boss-recommend__*` 工具，无需像 Cursor 那样单独配 MCP 面板
   - 见 [runtime/README.md](runtime/README.md) 升级说明
 
 ---
@@ -46,12 +61,12 @@ flowchart LR
 ### OpenClaw（推荐）
 
 ```bash
-git clone https://github.com/spikesubingrui-design/boss-greeting-rank.git
-cd boss-greeting-rank
+git clone https://github.com/spikesubingrui-design/boss-hiring.git
+cd boss-hiring
 ./install.sh openclaw
 ```
 
-对 Agent 说：**「用 boss-greeting-rank 帮我给 XX 岗位打招呼排名」**。
+对 Agent 说：**「用 boss-hiring 帮我给 XX 岗位打招呼排名」**。
 
 详见 [docs/install-openclaw.md](docs/install-openclaw.md)。
 
@@ -76,7 +91,49 @@ cd boss-greeting-rank
 
 数据目录：`~/.boss-recommend-mcp/boss-chat/greeting-rank/<job_slug>/`
 
-完整字段说明见 [reference.md](reference.md)。
+完整字段说明见 [reference.md](reference.md)；部署/反爬/模型选型踩坑见 [运维 runbook](docs/runbook-boss-greeting-ops.md)。
+
+---
+
+## 常见问题 FAQ
+
+<details>
+<summary><b>会不会被 Boss 直聘封号？</b></summary>
+
+默认 **只读**，不发消息、不点求简历，行为接近正常浏览。配合 CloakBrowser 指纹隐身 + 拟人节奏，进一步降低被识别概率。节奏档位（baseline / paced / paced_with_rests）可在 `screening-config.json` 里调，**追速度选轻档、追稳妥选重档**，权衡见 [runbook](docs/runbook-boss-greeting-ops.md)。
+</details>
+
+<details>
+<summary><b>「只读」具体意味着什么？</b></summary>
+
+Skill 内置护栏会拒绝任何写操作参数（如 `greeting_text`、求简历类动作）。它只**读取**招呼列表与在线简历用于打分，不会替你回复候选人。
+</details>
+
+<details>
+<summary><b>需要自己的 LLM API Key 吗？</b></summary>
+
+需要。本仓库**不含**任何账号、Key 或 `screening-config.json` 密钥。打分用的视觉模型必须支持 `image_url`（看简历截图），并在你所用平台的 allowlist 内。选型硬约束见 [runbook · 模型选型](docs/runbook-boss-greeting-ops.md)。
+</details>
+
+<details>
+<summary><b>支持多个岗位 / 多套标准吗？</b></summary>
+
+支持。每个岗位一个 `job_slug`，各自独立的 `rubric.json` + `ranking.json`，互不干扰，可反复增量合并。
+</details>
+
+<details>
+<summary><b>跑批很慢 / 动作脱节怎么办？</b></summary>
+
+多半是拟人节流档太重（`paced_with_rests` 会插 8–45s 短休与 60–180s 长休）。把 `screening-config.json` 的 `humanBehavior.profile` 调成 `paced` 或 `baseline`，并关掉 `shortRest` / `batchRest` / `actionCooldown` 即可显著提速，反爬交给 CloakBrowser 兜底。
+</details>
+
+---
+
+## ⭐ Star History
+
+如果它帮你省了筛招呼的时间，点个 **Star** 是对维护最大的鼓励。
+
+[![Star History Chart](https://api.star-history.com/svg?repos=spikesubingrui-design/boss-hiring&type=Date)](https://star-history.com/#spikesubingrui-design/boss-hiring&Date)
 
 ---
 
@@ -96,7 +153,7 @@ cd boss-greeting-rank
 - Node.js ≥ 18（运行时）
 - Python 3（解析脚本）
 - 已登录的 Boss 直聘招聘端 + Chrome DevTools（由 boss-recommend-mcp 管理）
-- LLM：复用 `~/.boss-recommend-mcp/screening-config.json`
+- LLM：复用 `~/.boss-recommend-mcp/screening-config.json`，视觉模型需支持 `image_url`
 
 ---
 
@@ -109,7 +166,7 @@ cd boss-greeting-rank
 
 ## 贡献与支持
 
-- 问题与功能请求：[GitHub Issues](https://github.com/spikesubingrui-design/boss-greeting-rank/issues)
+- 问题与功能请求：[GitHub Issues](https://github.com/spikesubingrui-design/boss-hiring/issues)
 - 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md)
 - 变更记录：[CHANGELOG.md](CHANGELOG.md)
 
@@ -118,5 +175,5 @@ cd boss-greeting-rank
 ---
 
 <p align="center">
-  <sub>Built with OpenPike · 开派智能</sub>
+  <sub>Built with OpenPike · 开派智能 — 如果有用，欢迎 ⭐ Star</sub>
 </p>

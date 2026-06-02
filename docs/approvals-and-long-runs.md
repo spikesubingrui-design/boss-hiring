@@ -21,7 +21,7 @@ Boss 招呼排名会跑 **几十分钟** 的 boss-chat（滚动列表、开简�
 
 **建议：**
 
-1. 仅在跑 **boss-greeting-rank / boss-chat 只读扫招呼** 的专用会话里开。  
+1. 仅在跑 **boss-hiring / boss-chat 只读扫招呼** 的专用会话里开。  
 2. 本 skill 已禁止自动打招呼、自动求简历；但 **无法阻止** Agent 执行其它 shell 命令。  
 3. 扫完后可新开会话，或改回「每次询问」。
 

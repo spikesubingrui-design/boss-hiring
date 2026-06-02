@@ -3,12 +3,12 @@
 ## 1. 安装本 Skill
 
 ```bash
-git clone https://github.com/spikesubingrui-design/boss-greeting-rank.git
-cd boss-greeting-rank
+git clone https://github.com/spikesubingrui-design/boss-hiring.git
+cd boss-hiring
 ./install.sh openclaw
 ```
 
-安装位置：`~/.openclaw/skills/boss-greeting-rank`（符号链接到仓库目录）。
+安装位置：`~/.openclaw/skills/boss-hiring`（符号链接到仓库目录）。
 
 ## 2. 确认 Boss 运行时
 
@@ -38,7 +38,7 @@ npm list -g @reconcrap/boss-recommend-mcp
 
 对 Agent 说例如：
 
-- 「用 boss-greeting-rank 给 **Java 后端** 岗位打招呼排名」
+- 「用 boss-hiring 给 **Java 后端** 岗位打招呼排名」
 - 「只扫新招呼，合并进已有排名」
 
 ## 6. 云端 OpenClaw

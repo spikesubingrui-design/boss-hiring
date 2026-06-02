@@ -1,4 +1,4 @@
-# boss-greeting-rank reference
+# boss-hiring reference
 
 ## 数据文件 schema
 
@@ -130,3 +130,32 @@ report.json → `summary.results[]`，每项：
 重点考察候选人主动打招呼/首条消息内容，并将其纳入评分（占{greeting_weight}分）。
 只做筛选打分，不要发送任何消息，不要点击求简历。
 ```
+
+## 模型选型与端点兼容（视觉硬约束）
+
+简历以**截图**形式喂给 LLM，必须用视觉模型。三道独立关卡都要过：
+
+1. 视觉能力：支持 `image_url`（纯文本模型会静默漏读简历）。
+2. allowlist：在所用平台的 models 白名单内。
+3. 端点兼容：在所配端点上可用（同模型换端点可能 404）。
+
+`screening-config.json` 关键字段：
+
+| 字段 | 含义 |
+|------|------|
+| `model` | 主模型（如 `GLM-5.1`） |
+| `baseUrl` | LLM 端点（如 `https://ark.cn-beijing.volces.com/api/coding/v3`） |
+| `llmModels` | 有序 failover 链；每项可覆盖 `model`/`baseUrl`/`apiKey`，缺省继承顶层；**全部失败**才报 `All configured LLM models failed` |
+| `llmImageLimit` / `llmImageDetail` | 单候选送审图片数 / 清晰度 |
+
+failover 写法（只放已验证的视觉模型）：
+
+```json
+"llmModels": [
+  { "name": "primary-glm-5.1-vision", "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3", "apiKey": "<key>", "model": "GLM-5.1" }
+]
+```
+
+已知坏样例：`doubao-seed-2-0-lite`（不在 allowlist）、`huoshan/...-vision`（coding 端点 404）、`deepseek-v4-pro`（纯文本）。已知可用：`GLM-5.1`（ark coding/v3）。
+
+超时：run 级 `timeoutSeconds` 建议 **≥1200s**（浏览器+开简历+截图+LLM 串行，900s 易中途超时）。运行环境/浏览器/cron 模板见 [docs/runbook-boss-greeting-ops.md](docs/runbook-boss-greeting-ops.md)。

@@ -3,12 +3,12 @@
 ## 1. 安装 Skill
 
 ```bash
-git clone https://github.com/spikesubingrui-design/boss-greeting-rank.git
-cd boss-greeting-rank
+git clone https://github.com/spikesubingrui-design/boss-hiring.git
+cd boss-hiring
 ./install.sh cursor
 ```
 
-安装位置：`~/.cursor/skills/boss-greeting-rank`。
+安装位置：`~/.cursor/skills/boss-hiring`。
 
 ## 2. 启用 MCP
 
@@ -22,6 +22,6 @@ cd boss-greeting-rank
 
 ## 4. 使用
 
-在 Agent 模式中说：「用 boss-greeting-rank 对 XX 岗位做招呼排名」。
+在 Agent 模式中说：「用 boss-hiring 对 XX 岗位做招呼排名」。
 
 Agent 会按 `SKILL.md` 访谈需求并驱动 MCP；完成后用本仓库 `scripts/` 解析 report。

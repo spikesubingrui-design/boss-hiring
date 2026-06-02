@@ -1,5 +1,5 @@
 ---
-name: boss-greeting-rank
+name: boss-hiring
 description: >-
   Interview hiring requirements into a weighted scoring rubric, then drive the
   boss-chat runtime on the Boss Zhipin chat page to rank candidate greetings:
@@ -108,6 +108,33 @@ per-job 目录：`~/.boss-recommend-mcp/boss-chat/greeting-rank/<job_slug>/`
 - `seen.json`：已处理过的 `candidate_key`，支撑"只算新招呼"。
 
 `<job_slug>`：岗位名小写、空格与符号转 `-`。
+
+## 模型选型（视觉筛选硬约束）
+
+打分要看简历**截图**，属于视觉任务。模型不是随便选的，**allowlist 限制**与**端点兼容性**是两道**独立关卡**，过了一道不代表过另一道：
+
+1. **必须支持 `image_url`（多模态视觉）**：纯文本模型看不到简历截图，会“看着像在打分、实则没读到简历”。
+2. **必须在所在平台的 models allowlist 内**：不在白名单的模型直接被拒。
+3. **必须兼容所用端点**：同一模型在不同端点（如 coding plan 端点）可能 404。
+
+已知坏样例（别再踩）：
+
+| 模型 | 失败原因 | 关卡 |
+|------|---------|------|
+| `doubao-seed-2-0-lite` | 不在 models allowlist | allowlist |
+| `huoshan/...-vision` | coding plan 端点 404 | 端点兼容 |
+| `deepseek-v4-pro` | 纯文本，看不了简历截图 | 视觉能力 |
+
+已知可用：
+
+| 模型 | 端点 | 说明 |
+|------|------|------|
+| `GLM-5.1` | `https://ark.cn-beijing.volces.com/api/coding/v3` | 支持视觉，当前 `screening-config.json` 主模型 |
+
+补充：
+
+- 模型配置集中在 `~/.boss-recommend-mcp/screening-config.json`（`model` + `llmModels` 降级链）；`llmModels` 为按序 failover，**只放已验证“支持视觉 + 在 allowlist + 端点兼容”的模型**，禁止塞纯文本/未验证模型。
+- run 级超时建议 **≥ 1200s**：一次 run 串行做“浏览器滚动 + 开简历 + 截图 + LLM 打分”，900s 容易在筛选途中超时（cron 里 `timeoutSeconds: 1200`）。
 
 ## 已知 bug 与防护（默认开启的硬规则）
 
