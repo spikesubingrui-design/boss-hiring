@@ -124,7 +124,9 @@ Skill 内置护栏会拒绝任何写操作参数（如 `greeting_text`、求简�
 <details>
 <summary><b>跑批很慢 / 动作脱节怎么办？</b></summary>
 
-多半是拟人节流档太重（`paced_with_rests` 会插 8–45s 短休与 60–180s 长休）。把 `screening-config.json` 的 `humanBehavior.profile` 调成 `paced` 或 `baseline`，并关掉 `shortRest` / `batchRest` / `actionCooldown` 即可显著提速，反爬交给 CloakBrowser 兜底。
+优先看两件事：**节奏档**与**每人图片成本**。
+
+1) 拟人节奏别用重档：`paced_with_rests` 会插 8–45s 短休与 60–180s 长休，还会造成动作间停顿“脱节”。把 `screening-config.json` 的 `humanBehavior.profile` 调成 `paced` 或 `baseline`，并关掉 `shortRest` / `batchRest` / `actionCooldown`（以及 `listScrollJitter`）即可显著提速。\n\n2) 下调 `llmImageLimit`：一人默认最多送审 8 张图，速度会被“截图页数 + 视觉推理”放大。建议先 `8 → 5`，覆盖足够再降到 `3`。\n\n3) 走 OCR 文本缓存复用：把简历截图 OCR 成本地文本（见 [runbook](docs/runbook-boss-greeting-ops.md) 的 OCR 归档），后续“读本地文本再打分”会比反复开简历/截图/视觉快很多。
 </details>
 
 ---
