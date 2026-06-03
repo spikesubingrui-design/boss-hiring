@@ -6,27 +6,36 @@
 
 ### rubric.json
 
+v7+ 推荐字段（兼容旧版 `key`/`label` 写法）：
+
 ```json
 {
-  "job_slug": "java-backend",
-  "job_label": "Java后端工程师",
-  "created_at": "2026-06-01T12:00:00Z",
-  "updated_at": "2026-06-01T12:00:00Z",
+  "job": "超级个体 _ 杭州",
+  "job_slug": "超级个体-杭州",
+  "version": "v7",
   "dimensions": [
-    { "key": "experience", "label": "相关经验", "weight": 35 },
-    { "key": "skill_match", "label": "技能匹配", "weight": 30 },
-    { "key": "education", "label": "学历院校", "weight": 15 },
-    { "key": "greeting", "label": "打招呼内容", "weight": 20 }
+    { "name": "AI多工具工作流", "weight": 30, "boss_signals": ["..."], "scoring": { "5": "...", "0": "..." } },
+    { "name": "自驱力与执行力", "weight": 25 },
+    { "name": "前沿技术追踪", "weight": 10 },
+    { "name": "问题解决能力", "weight": 12 },
+    { "name": "AI架构能力", "weight": 8 },
+    { "name": "工程基础", "weight": 5 },
+    { "name": "打招呼质量", "weight": 10 }
   ],
-  "must_have": ["3年以上Java", "本科及以上"],
-  "dealbreaker": ["仅外包经历", "频繁跳槽(1年内3次)"],
-  "greeting_weight": 20,
-  "criteria": "重点考察相关经验与技能匹配……并重点考察候选人主动打招呼/首条消息内容并纳入评分。"
+  "hard_requirements": { "rules": ["无可验证独立产出"] },
+  "dealbreaker": ["1年内跳槽≥3次", "与AI开发无关且无转型证据"],
+  "soft_penalties": {
+    "salary": { "baseline_k": 15, "tiers": [{ "range": "15-18K", "penalty": 5 }] }
+  },
+  "greeting_text_weight": 0.1,
+  "criteria": "人话版打分说明，绑定 Boss greeting_text + 简历截图 + 期望薪资……"
 }
 ```
 
-- `dimensions[].weight` 合计 100，且必须含一条 `key=greeting`，其 weight = `greeting_weight`。
-- `criteria` 是传给 boss-chat 的自由文本，必须显式包含打招呼文本评分要求。
+- `dimensions[].weight` 合计 100；含「打招呼」维度，其 weight 与 `greeting_text_weight` 一致（如 10 → 0.1）。
+- `boss_signals`（可选）：该维度在 Boss 简历/招呼里看哪些线索。
+- `dealbreaker` / `soft_penalties`：硬性淘汰 vs 只降分（薪资超预算等）。
+- `criteria` 传给 boss-chat；cron 与 run 均**读取 rubric 文件**，禁止内联过期 criteria。JD 粘贴稿见 `docs/boss-jd-<job_slug>-vN.md`。
 
 ### ranking.json
 

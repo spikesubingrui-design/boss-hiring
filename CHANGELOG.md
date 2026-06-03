@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0] - 2026-06-03
+
+### Added
+
+- `docs/boss-jd-超级个体-杭州-v7.md`：Boss 直聘岗位描述（人话版，可粘贴后台）
+- SKILL.md：需求访谈推荐 `matt-grill-me`；Boss 证据字段映射；live rubric v7 范例路径
+- reference.md：v7 rubric schema（`dealbreaker` / `soft_penalties` / `boss_signals`）
+- runbook canonical cron 模板升至 **v7**（AI多工具工作流30/自驱力25/…/打招呼10）
+
+### Changed
+
+- Live rubric「超级个体 _ 杭州」v6 → v7：多 AI 工具 workflow 为核心；招呼 10%；薪资软门槛；删杭州硬性
+
 ## [1.1.0] - 2026-06-02
 
 ### Added

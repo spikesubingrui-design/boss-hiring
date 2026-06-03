@@ -70,17 +70,19 @@ Boss 简历页常在简历主体后出现推荐/分析/隐私声明模块（如�
 
 因此在截图滚动/归档时，把「为妥善保护…」作为 stop boundary 是推荐策略：**遇到它就该停**。
 
-## 5. Canonical cron prompt（v6，指向 rubric.json）
+## 5. Canonical cron prompt（v7，指向 rubric.json）
 
 cron 模板**不要内联旧 criteria 文本**（曾因模板没更新仍写 v5 而踩坑），统一指向 per-job 的 `rubric.json`，rubric 升级后 cron 自动跟随。
 
-下为当前 live 的 v6 模板（OpenClaw cron `payload.message`，岗位「超级个体 _ 杭州」）：
+Boss 岗位描述（粘贴用）：[boss-jd-超级个体-杭州-v7.md](./boss-jd-超级个体-杭州-v7.md)
+
+下为当前 live 的 v7 模板（OpenClaw cron `payload.message`，岗位「超级个体 _ 杭州」）：
 
 ```text
 ## Boss 直聘新招呼筛选 + 排名 + 归档
 
 ### 步骤 1: 筛选未读新招呼
-使用 start_boss_chat_run：job=超级个体 _ 杭州, start_from=unread, criteria 基于 v6 体系（读取 ~/.boss-recommend-mcp/boss-chat/greeting-rank/超级个体-杭州/rubric.json）, post_action=favorite
+使用 start_boss_chat_run：job=超级个体 _ 杭州, start_from=unread, criteria 基于 v7 体系（读取 ~/.boss-recommend-mcp/boss-chat/greeting-rank/超级个体-杭州/rubric.json）, post_action=favorite
 
 ### 步骤 2: 轮询完成
 使用 get_boss_chat_run 轮询直到 completed
@@ -88,8 +90,8 @@ cron 模板**不要内联旧 criteria 文本**（曾因模板没更新仍写 v5 
 ### 步骤 3: OCR 归档
 运行 python3 /Users/spikescp/.openclaw/workspace/scripts/boss-resume-archive.py 自动 OCR 截图并存入 OpenPike/招聘/简历文本/
 
-### 步骤 4: v6 排名
-逐份阅读 OCR 文本，用 v6 评分体系打分（7维度：AI驱动开发25/前沿技术追踪20/自驱力20/问题解决15/AI架构10/工程基础5/打招呼5）。输出排名到 OpenPike/招聘/已排名/
+### 步骤 4: v7 排名
+逐份阅读 OCR 文本，用 v7 评分体系打分（7维度：AI多工具工作流30/自驱力25/前沿技术10/问题解决12/AI架构8/工程基础5/打招呼10）。输出排名到 OpenPike/招聘/已排名/
 
 ### 步骤 5: 通知
 🟢第一梯队 → 飞书私聊推送 Spike

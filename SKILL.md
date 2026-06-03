@@ -40,20 +40,23 @@ disable-model-invocation: true
 
 ### 1. 需求访谈 → rubric
 
+**推荐用 `matt-grill-me` skill**：一次只问一个问题，每题给推荐答案，走通决策树后再落盘。禁止 agent 代填权重或代确认。
+
 逐项问（一次一个），不要替用户预设：
 
 - `job`：目标岗位（稍后从 boss-chat 岗位列表确认真实值）。
-- 核心着重点：开放文本，用户最看重什么。
+- 核心着重点：开放文本，用户最看重什么（例：多 AI 工具 workflow，不是单模型写代码）。
 - 维度与权重：把着重点拆成若干维度并给权重（合计 100）。
-- 硬性条件 / 一票否决：缺哪些直接判 0 或淘汰。
+- 硬性条件 / 一票否决 / 软门槛：哪些直接淘汰、哪些只降分（如薪资超预算）。
 - 打招呼文本权重：候选人主动打招呼/首条消息内容占比多少。
+- **Boss 证据映射**：打分依据 Boss 上实际可见内容——`greeting_text`、在线简历截图（个人优势/项目/工作经历）、期望薪资；学历通常不卡。
 
 产出两样：
 
-- `rubric.json`（结构见 [reference.md](reference.md)），保存到 per-job 目录。
-- `criteria` 自由文本（boss-chat 的 LLM 只吃 criteria）。criteria 内必须显式写入"重点考察候选人主动打招呼/首条消息内容并纳入评分"。
+- `rubric.json`（结构见 [reference.md](reference.md)），保存到 per-job 目录。Live 范例：`~/.boss-recommend-mcp/boss-chat/greeting-rank/超级个体-杭州/rubric.json`（v7）。
+- `criteria` 自由文本（boss-chat 的 LLM 只吃 criteria）。用人话写，绑定 Boss 字段；必须显式写入打招呼纳入评分。Boss 岗位 JD 可另存 `docs/boss-jd-<job_slug>-vN.md`。
 
-同岗位再次运行时，先复用已存在的 `rubric.json`，询问是否调整后再继续。
+同岗位再次运行时，先复用已存在的 `rubric.json`，询问是否调整后再继续。cron **只读 `rubric.json` 的 criteria**，不要内联旧版文本（见 [runbook](docs/runbook-boss-greeting-ops.md)）。
 
 ### 2. 选岗位
 
