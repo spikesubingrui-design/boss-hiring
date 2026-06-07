@@ -97,7 +97,9 @@ python3 /Users/spikescp/.openclaw/workspace/boss-hiring/scripts/boss-hiring-flow
 - 防漏人：`target_count="all"` 时配较大的 `list_max_scrolls` 与 `max_candidates`；`detail_limit` 不低于预期候选数。
 - 抗卡死：`online_resume_button_timeout_ms`（慢网默认 30000）、设 `llm_timeout_ms`、`delay_ms`，`detail_source=cascade`。
 
-拿到 `ACCEPTED + run_id` 后默认结束本轮，不主动高频轮询。
+拿到 `ACCEPTED + run_id` 后：
+- **不要让用户来告诉你 run 跑完了**。在 `poll_after_sec`（通常 10s）过后主动调一次 `get_boss_chat_run` 确认状态，之后按 30 分钟间隔检查。
+- 如果用户说"已经跑完了"或"我看已经全量读取完了"，立即查状态并开始 post-run 流程，不要反问。
 
 ### 5. 解析 + 只评「未打分」（含 MCP fail）
 
@@ -165,7 +167,9 @@ per-job 目录：`~/.boss-recommend-mcp/boss-chat/greeting-rank/<job_slug>/`
 | **MCP 过度淘汰** | MCP screening score=0 不应直接跳过 v7 打分。所有 MCP fail 的人也应该进 `unscored` 列表，由 v7 rubric 独立判断。MCP 只是第一层筛，不是终审 |
 
 | **MCP LLM 全量失败** | 如果 run 完成后所有候选人 `screening.reasons` 包含 `llm_invalid_response`，说明 LLM 端点有问题（模型名/端点/API Key 不匹配）。此时：1) 检查 `screening-config.json` 的 `llmModels[0].baseUrl` 是否与模型兼容；2) 用 identity-only 做降级打分（score_notes 标注）；3) 对 top 候选人手动看截图二次评估 |
-| **模型端点不兼容** | GLM-5.1 在 `/api/coding/v3` 端点可能 404，应统一用 `/api/v3`。doubao-seed-1-8-251228 是纯文本模型不支持视觉，不能作为 vision 筛选主模型 |
+| **模型端点不兼容** | GLM-5.1 在 `/api/coding/v3` 端点可能 404，应统一用 `/api/v3`。doubao-seed-1-8-251228 是纯文本模型不支持视觉，不能作为 vision 筛选主模型。详见 [references/screening-model-config.md](references/screening-model-config.md) |
+| **用户说不想重复看** | boss-chat 没有"跳过已处理"选项。用户说"已经看过的别再重复了"时：1) 如果旧 run 的数据可用（report 里已有候选人数据），直接用旧数据打分，新 run 只扫 `unread`；2) 如果旧数据不可用（MCP LLM 全失败），必须全量重扫才能拿到简历截图，需向用户解释并接受 |
+| **不要让用户监控任务** | 启动 boss-chat 后**主动**检查进度，不要等用户来告诉你"跑完了"。`poll_after_sec` 过后查一次，之后 30 分钟一次 |
 
 stuck 判定窗口与 skip 类别见 [reference.md](reference.md)。
 
@@ -176,7 +180,7 @@ stuck 判定窗口与 skip 类别见 [reference.md](reference.md)。
 - 复用 `screening-config.json` 的 LLM 配置，不另向用户要 `baseUrl/apiKey/model`。
 - `job`/`start_from`/`criteria` 缺一不可；`target_count` 必填，"全部/扫到底"字面传 `"all"`。
 - 不替用户代填或代确认 boss-chat 参数。
-- 长任务默认不轮询；需 stuck 检测时可短间隔但要让用户知情，否则默认 30 分钟一次。
+- 长任务：启动后 `poll_after_sec` 过后主动查一次状态，之后 30 分钟一次；**不要让用户来告诉你跑完了**。
 - `pause`/`resume`/`cancel` 必须复用同一 `run_id`。
 
 ## OpenClaw / Shell-only 兜底
