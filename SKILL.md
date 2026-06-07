@@ -151,7 +151,7 @@ per-job 目录：`~/.boss-recommend-mcp/boss-chat/greeting-rank/<job_slug>/`
 
 完整已知好/坏模型列表与验证清单见 [references/screening-model-config.md](references/screening-model-config.md)。
 
-当前推荐：`GLM-5.1` on `https://ark.cn-beijing.volces.com/api/coding/v3`（支持视觉，imageDetail=medium，timeout≥120s）。
+当前推荐：`qwen-vl-max` on `https://dashscope.aliyuncs.com/compatible-mode/v1`（百炼视觉模型，OpenAI 兼容，已验证可用）。降级备选 `qwen-vl-plus`。
 
 ## 已知 bug 与防护（默认开启的硬规则）
 
