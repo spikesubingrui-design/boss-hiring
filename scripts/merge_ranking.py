@@ -116,8 +116,12 @@ def main():
         "candidate_total": len(candidates),
         "candidates": candidates,
     }
+    scored_keys = sorted(
+        k for k, rec in existing.items() if rec.get("scored_at") and rec.get("dimension_scores")
+    )
     seen_out = {
         "job_slug": args.job_slug,
+        "scored_candidate_keys": scored_keys,
         "seen_candidate_keys": sorted(existing.keys()),
         "runs": sorted(run_ids),
     }
@@ -133,6 +137,7 @@ def main():
         "added": added,
         "updated": updated,
         "total": len(candidates),
+        "v7_scored": len(scored_keys),
         "skipped_in_ranking": skipped,
         "top": [
             {"display": c.get("display"), "total_score": c.get("total_score"),

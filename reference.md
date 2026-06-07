@@ -69,8 +69,17 @@ v7+ 推荐字段（兼容旧版 `key`/`label` 写法）：
 ### seen.json
 
 ```json
-{ "job_slug": "java-backend", "seen_candidate_keys": ["chat:id:65113687-0"], "runs": ["mcp_chat_aaa"] }
+{
+  "job_slug": "java-backend",
+  "scored_candidate_keys": ["chat:id:65113687-0"],
+  "seen_candidate_keys": ["chat:id:65113687-0", "chat:id:652754543-0"],
+  "runs": ["mcp_chat_aaa", "mcp_chat_bbb"]
+}
 ```
+
+- `scored_candidate_keys`：已完成 v7 打分（`ranking.json` 内有 `scored_at` + `dimension_scores`）。
+- `seen_candidate_keys`：曾进入 `ranking.json` 的所有人（含仅 MCP、待补 v7）。
+- 增量 run 的 v7 步骤只处理 **不在 `scored_candidate_keys`** 的人；合并后仍输出**全员**排序。
 
 ## report.json 字段映射（boss-chat 产物 → 候选记录）
 

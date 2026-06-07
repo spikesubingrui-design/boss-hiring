@@ -1,13 +1,6 @@
 ---
 name: boss-hiring
-description: >-
-  Interview hiring requirements into a weighted scoring rubric, then drive the
-  boss-chat runtime on the Boss Zhipin chat page to rank candidate greetings:
-  first run scores ALL greetings, later runs score only NEW greetings and merge
-  into the saved ranking. Scoring folds in the candidate's greeting/chat message
-  text alongside the resume. Read-only by default (never sends a greeting, never
-  requests a resume). Use when the user wants to 自动问需求打分 / rank Boss 招呼 /
-  给 boss 直聘打招呼排名 / 合并新招呼 / 按着重点给候选人打分.
+description: "Interview hiring requirements into a weighted scoring rubric for Boss直聘 recruitment."
 disable-model-invocation: true
 ---
 
@@ -30,13 +23,27 @@ disable-model-invocation: true
 复制此清单跟踪进度：
 
 ```
+- [ ] 0. 需求校准（复用 rubric 前必须走这一步）
 - [ ] 1. 需求访谈 → 生成/复用 rubric
 - [ ] 2. prepare 取岗位列表，用户选 job
-- [ ] 3. 判定首次/再次（看 ranking.json 是否存在）
+- [ ] 3. plan：首次全量 / 之后只扫未读 + 只评未打分
 - [ ] 4. 启动 boss-chat（只读参数块）
-- [ ] 5. run 完成后解析 report.json → 按 rubric 打分
-- [ ] 6. 写入/合并 ranking.json，输出排名
+- [ ] 5. run 完成后只对「未 v7 打分」的人按 rubric 打分
+- [ ] 6. merge_ranking 合并进历史全员榜，输出全局排名
 ```
+
+### 0. 需求校准（硬规则）
+
+**即使已有 rubric，重新评分或新 session 时必须先跟用户过一遍需求定位**，不要假设旧 rubric 仍然准确。
+
+流程：
+1. 读出当前 rubric 的维度/权重/硬条件，展示给用户
+2. 问清楚岗位本质变化（做什么、阶段路线、技术栈偏好、工作方式硬性条件）
+3. 用户确认或修正后，才进入 step 1
+
+反模式：直接启动 boss-chat 用旧 rubric → 打分维度跟用户实际想找的人不匹配 → 排名无意义。
+
+教训来源：v7→v8.1 升级过程中发现 rubric 定位严重偏离用户实际需求（缺少工程能力维度、薪资基线不匹配、硬条件过严、缺少"不弃养"维度等）。
 
 ### 1. 需求访谈 → rubric
 
@@ -62,12 +69,22 @@ disable-model-invocation: true
 
 先用空参 `prepare_boss_chat_run` 取 `job_options`，让用户从列表选 `job`。页面未就绪不要问岗位。
 
-### 3. 判定首次 / 再次
+### 3. 首次全量 vs 增量（硬规则）
 
-按 `<job_slug>/ranking.json` 是否存在：
+先跑规划脚本（不要猜）：
 
-- 不存在 → 首次 → `start_from=all`（扫全部招呼）。
-- 已存在 → 再次 → `start_from=unread`（只扫新招呼），完成后合并。
+```bash
+python3 /Users/spikescp/.openclaw/workspace/boss-hiring/scripts/boss-hiring-flow.py plan <job_slug>
+```
+
+| 阶段 | boss-chat `start_from` | v7 打分范围 | 合并目标 |
+|------|------------------------|-------------|----------|
+| **首次**（`ranking.json` 里无人带 `scored_at`） | `all` 全量扫招呼 | 本 run **全部**候选人 | 写入 `ranking.json` |
+| **之后每次** | `unread` 只扫新未读 | 仅 **`scored_at` 为空** 的 `candidate_key` | **合并进历史已打分全员榜** |
+
+判定「已打分」：`ranking.json` 里该人有 `scored_at` + `dimension_scores`（不是 MCP 的 `screening.score`）。
+
+`seen.json` 的 `scored_candidate_keys` 与上同义；`seen_candidate_keys` 是榜内出现过的所有人（含仅 MCP、待补 v7）。
 
 ### 4. 启动 boss-chat（只读参数块）
 
@@ -82,62 +99,57 @@ disable-model-invocation: true
 
 拿到 `ACCEPTED + run_id` 后默认结束本轮，不主动高频轮询。
 
-### 5. 解析 + 打分
+### 5. 解析 + 只评「未打分」（含 MCP fail）
 
-run 完成后（用户确认或 `get_boss_chat_run` 显示完成）：
-
-```bash
-python3 scripts/extract_candidates.py <report_json_path> > candidates.json
-```
-
-`report_json_path` 取自 run JSON 的 `result.report_json`（位于 `~/.boss-recommend-mcp/boss-chat/runs/<run_id>.json`）。
-
-对每位候选，agent 依据 `rubric.json` 打分：总分 = 简历维度加权分 +（greeting 维度分 × 权重）。不要直接采用 MCP 的 `screening.score`，以保证跨 run 口径一致。
-
-### 6. 合并 + 输出
+run 完成后：
 
 ```bash
-python3 scripts/merge_ranking.py <job_slug> <scored_candidates.json>
+python3 scripts/boss-hiring-flow.py post-run <job_slug> <run_id>
 ```
 
-按 `candidate_key` 去重（新覆盖旧、保留首次出现 `run_id`），按总分降序写回 `ranking.json`，输出 Top 排名给用户。
+会生成 `extract-<run_id>.json` 与 **`unscored-<run_id>.json`**（已 v7 打过分的人自动剔除）。
+
+**关键变更（v8）**：`unscored` 列表**包含 MCP fail 的人**。MCP screening score=0 不意味着不需要 v7 打分——MCP 只是粗筛，v7 rubric 是独立评估。
+
+只对 `unscored-*.json` 里的人按 `rubric.json` 打 v7 分；每人落盘字段必须含：`scored_at`、`dimension_scores`、`total_score`（及可选 `score_notes`）。
+
+**v7 打分硬规则**：
+- `score_notes` **禁止**写 "自动从MCP CoT估算"——必须基于简历截图实际内容
+- 每个人必须有**不同的维度分组合**——如果连续 5 人维度分完全一样，说明打分没在看简历
+- `dimension_scores` 里每个维度的分数必须与该维度的 `scoring` 描述对应（0-5 档位 × weight）
+
+```bash
+# 可选：手动过滤
+python3 scripts/extract_candidates.py <report_json> > all.json
+python3 scripts/boss-hiring-flow.py filter-unscored <job_slug> all.json -o unscored.json
+```
+
+### 6. 合并进全量榜 + 输出
+
+```bash
+python3 scripts/merge_ranking.py <job_slug> scored_candidates.json
+python3 scripts/boss-hiring-flow.py show-ranking <job_slug>
+```
+
+`merge_ranking` 按 `candidate_key` 去重合并：**新分覆盖旧分，未出现在本 run 的历史候选人保留**，全表按 `total_score` 降序。输出的是**截至目前所有已打分的人**的全局排名，不是「仅本 run 子集」。
 
 ## 数据位置
 
 per-job 目录：`~/.boss-recommend-mcp/boss-chat/greeting-rank/<job_slug>/`
 
 - `rubric.json`：维度/权重/硬性项/greeting 权重/criteria。
-- `ranking.json`：合并后的排名数组。
-- `seen.json`：已处理过的 `candidate_key`，支撑"只算新招呼"。
+- `ranking.json`：全员合并榜（按 `total_score` 排序）。
+- `seen.json`：`scored_candidate_keys`（已 v7 打分）+ `seen_candidate_keys`（榜内所有人）。
 
 `<job_slug>`：岗位名小写、空格与符号转 `-`。
 
 ## 模型选型（视觉筛选硬约束）
 
-打分要看简历**截图**，属于视觉任务。模型不是随便选的，**allowlist 限制**与**端点兼容性**是两道**独立关卡**，过了一道不代表过另一道：
+打分要看简历**截图**，属于视觉任务。模型不是随便选的，**allowlist 限制**与**端点兼容性**是两道**独立关卡**，过了一道不代表过另一道。
 
-1. **必须支持 `image_url`（多模态视觉）**：纯文本模型看不到简历截图，会“看着像在打分、实则没读到简历”。
-2. **必须在所在平台的 models allowlist 内**：不在白名单的模型直接被拒。
-3. **必须兼容所用端点**：同一模型在不同端点（如 coding plan 端点）可能 404。
+完整已知好/坏模型列表与验证清单见 [references/screening-model-config.md](references/screening-model-config.md)。
 
-已知坏样例（别再踩）：
-
-| 模型 | 失败原因 | 关卡 |
-|------|---------|------|
-| `doubao-seed-2-0-lite` | 不在 models allowlist | allowlist |
-| `huoshan/...-vision` | coding plan 端点 404 | 端点兼容 |
-| `deepseek-v4-pro` | 纯文本，看不了简历截图 | 视觉能力 |
-
-已知可用：
-
-| 模型 | 端点 | 说明 |
-|------|------|------|
-| `GLM-5.1` | `https://ark.cn-beijing.volces.com/api/coding/v3` | 支持视觉，当前 `screening-config.json` 主模型 |
-
-补充：
-
-- 模型配置集中在 `~/.boss-recommend-mcp/screening-config.json`（`model` + `llmModels` 降级链）；`llmModels` 为按序 failover，**只放已验证“支持视觉 + 在 allowlist + 端点兼容”的模型**，禁止塞纯文本/未验证模型。
-- run 级超时建议 **≥ 1200s**：一次 run 串行做“浏览器滚动 + 开简历 + 截图 + LLM 打分”，900s 容易在筛选途中超时（cron 里 `timeoutSeconds: 1200`）。
+当前推荐：`GLM-5.1` on `https://ark.cn-beijing.volces.com/api/coding/v3`（支持视觉，imageDetail=medium，timeout≥120s）。
 
 ## 已知 bug 与防护（默认开启的硬规则）
 
@@ -147,6 +159,13 @@ per-job 目录：`~/.boss-recommend-mcp/boss-chat/greeting-rank/<job_slug>/`
 | 自动求简历 | `request_cv`/`request_resume`/`ask_cv`/`execute_post_action`=false，不传 `post_action` |
 | 卡在一个人不动 | 看 `progress.processed` 与 `heartbeat_at`；停滞超阈值 → `pause` → `cancel`（复用同一 `run_id`）→ 以 `start_from=unread` 重启跳过卡住者 |
 | 跳人（skip） | 跳过者不静默丢失，进 `ranking.json` 带 `skipped=true`+原因；区分有意跳过 vs 异常跳过（预算/滚动/超时），异常跳过计数并提示，必要时调大 `detail_limit`/`list_max_scrolls`/`max_candidates` 后补扫 |
+| **打分无区分度** | v7 打分**必须**基于简历截图视觉分析；禁止从 MCP screening 二元结果（pass/fail + score=0/100）"估算"分数。如果 `score_notes` 出现 "自动从MCP CoT估算"，说明打分流程有 bug，需要重新打分 |
+| **候选人重复** | `merge_ranking.py` 按 `candidate_key` 去重。如果同一人出现多个 `candidate_key`（如跨 run 的 chat ID 不同），需在 post-run 阶段做 name+identity 二次去重 |
+| **greeting_text 全丢** | 如果 100% 候选人 `greeting_text_missing=true`，说明 boss-chat 未抓取打招呼文本。此时打招呼维度给保守中位 3 分（不是 0），标 `greeting_source=fallback` |
+| **MCP 过度淘汰** | MCP screening score=0 不应直接跳过 v7 打分。所有 MCP fail 的人也应该进 `unscored` 列表，由 v7 rubric 独立判断。MCP 只是第一层筛，不是终审 |
+
+| **MCP LLM 全量失败** | 如果 run 完成后所有候选人 `screening.reasons` 包含 `llm_invalid_response`，说明 LLM 端点有问题（模型名/端点/API Key 不匹配）。此时：1) 检查 `screening-config.json` 的 `llmModels[0].baseUrl` 是否与模型兼容；2) 用 identity-only 做降级打分（score_notes 标注）；3) 对 top 候选人手动看截图二次评估 |
+| **模型端点不兼容** | GLM-5.1 在 `/api/coding/v3` 端点可能 404，应统一用 `/api/v3`。doubao-seed-1-8-251228 是纯文本模型不支持视觉，不能作为 vision 筛选主模型 |
 
 stuck 判定窗口与 skip 类别见 [reference.md](reference.md)。
 
